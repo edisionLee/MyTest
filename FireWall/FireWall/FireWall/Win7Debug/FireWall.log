@@ -1,0 +1,75 @@
+﻿生成启动时间为 2016/10/17 10:40:11。
+     1>项目“D:\WFP防火墙\FireWall\FireWall\FireWall\FireWall.vcxproj”在节点 2 上(Build 个目标)。
+     1>StampInf:
+         C:\Program Files (x86)\Windows Kits\8.1\bin\x86\stampinf.exe -d "*" -a "x86" -v "*" -k "1.11" -u "1.11.0" -f Win7Debug\FireWall.inf 
+         Stamping Win7Debug\FireWall.inf [Version] section with DriverVer=10/17/2016,10.40.11.660
+       ClCompile:
+         D:\VS2013\installer\VC\bin\CL.exe /c /I..\..\FireWall\Include /I..\..\FireWall\Source /IWin7Debug\ /Zi /nologo /W4 /WX /Od /Oi /Oy- /D _X86_=1 /D i386=1 /D STD_CALL /D DEPRECATE_DDK_FUNCTIONS=1 /D MSC_NOOPT /D _WIN32_WINNT=0x0601 /D WINVER=0x0601 /D WINNT=1 /D NTDDI_VERSION=0x06010000 /D DBG=1 /GF /Gm- /Zp8 /GS /Gy /fp:precise /Zc:wchar_t- /Zc:forScope- /GR- /Fo"Win7Debug\\" /Fd"Win7Debug\vc120.pdb" /Gz /wd4748 /wd4603 /wd4627 /wd4986 /wd4987 /wd4996 /FI"C:\Program Files (x86)\Windows Kits\8.1\Include\Shared\warning.h" /analyze- /errorReport:prompt /kernel -cbstring /d1import_no_registry /d2AllowCompatibleILVersions /d2Zi+ ..\Source\init.cpp
+         init.cpp
+     1>..\Source\init.cpp(37): error C3861: “LOG”:  找不到标识符
+     1>..\Source\init.cpp(46): error C3861: “LOG”:  找不到标识符
+     1>..\Source\init.cpp(53): error C3861: “LOG”:  找不到标识符
+     1>..\Source\init.cpp(60): error C3861: “LOG”:  找不到标识符
+     1>..\Source\init.cpp(75): error C3861: “LOG”:  找不到标识符
+     1>..\Source\init.cpp(82): error C3861: “CreateWorkerThread”:  找不到标识符
+     1>..\Source\init.cpp(89): error C3861: “WallCreateConnList”:  找不到标识符
+     1>..\Source\init.cpp(96): error C3861: “WallCreatePacketList”:  找不到标识符
+     1>..\Source\init.cpp(103): error C3861: “WallCreateInjectionHandle”:  找不到标识符
+     1>..\Source\init.cpp(110): error C3861: “crc32_init”:  找不到标识符
+     1>..\Source\init.cpp(112): error C3861: “CreateVolumeLinkTable”:  找不到标识符
+     1>..\Source\init.cpp(114): error C3861: “WallLoadConfig”:  找不到标识符
+     1>..\Source\init.cpp(116): error C3861: “WallRegisterCallouts”:  找不到标识符
+     1>..\Source\init.cpp(122): error C3861: “LOG”:  找不到标识符
+     1>..\Source\init.cpp(125): error C3861: “DestroyWorkerThread”:  找不到标识符
+     1>..\Source\init.cpp(128): error C3861: “WallDestroyConnList”:  找不到标识符
+     1>..\Source\init.cpp(131): error C3861: “WallDestroyPacketList”:  找不到标识符
+     1>..\Source\init.cpp(134): error C3861: “WallDestroyInjectionHandle”:  找不到标识符
+     1>..\Source\init.cpp(149): error C3861: “LOG”:  找不到标识符
+     1>..\Source\init.cpp(156): error C3861: “WallUnRegisterCallouts”:  找不到标识符
+     1>..\Source\init.cpp(158): error C3861: “DestroyWorkerThread”:  找不到标识符
+     1>..\Source\init.cpp(160): error C3861: “WallDestroyConnList”:  找不到标识符
+     1>..\Source\init.cpp(162): error C3861: “WallDestroyPacketList”:  找不到标识符
+     1>..\Source\init.cpp(164): error C3861: “WallDestroyInjectionHandle”:  找不到标识符
+     1>..\Source\init.cpp(166): error C3861: “WallUnloadConfig”:  找不到标识符
+     1>..\Source\init.cpp(169): error C3861: “DbgIsMemLeak”:  找不到标识符
+     1>..\Source\init.cpp(181): error C3861: “LOG”:  找不到标识符
+     1>..\Source\init.cpp(187): error C2065: “IOCTL_LOAD_PROCESS_CONFIG”: 未声明的标识符
+     1>..\Source\init.cpp(187): error C2051: case 表达式不是常量
+     1>..\Source\init.cpp(190): error C3861: “WallLoadProcessConfig”:  找不到标识符
+     1>..\Source\init.cpp(196): error C2065: “IOCTL_UNLOAD_PROCESS_CONFIG”: 未声明的标识符
+     1>..\Source\init.cpp(196): error C2051: case 表达式不是常量
+     1>..\Source\init.cpp(199): error C3861: “WallUnloadProcessConfig”:  找不到标识符
+     1>..\Source\init.cpp(205): error C2065: “IOCTL_LOAD_IP_CONFIG”: 未声明的标识符
+     1>..\Source\init.cpp(205): error C2051: case 表达式不是常量
+     1>..\Source\init.cpp(208): error C3861: “WallLoadIpConfig”:  找不到标识符
+     1>..\Source\init.cpp(213): error C2065: “IOCTL_UNLOAD_IP_CONFIG”: 未声明的标识符
+     1>..\Source\init.cpp(213): error C2051: case 表达式不是常量
+     1>..\Source\init.cpp(216): error C3861: “WallUnloadIpConfig”:  找不到标识符
+     1>..\Source\init.cpp(221): error C2065: “IOCTL_LOAD_DNS_CONFIG”: 未声明的标识符
+     1>..\Source\init.cpp(221): error C2051: case 表达式不是常量
+     1>..\Source\init.cpp(224): error C3861: “WallLoadDnsConfig”:  找不到标识符
+     1>..\Source\init.cpp(229): error C2065: “IOCTL_UNLOAD_DNS_CONFIG”: 未声明的标识符
+     1>..\Source\init.cpp(229): error C2051: case 表达式不是常量
+     1>..\Source\init.cpp(232): error C3861: “WallUnloadDnsConfig”:  找不到标识符
+     1>..\Source\init.cpp(238): error C2065: “IOCTL_MONITOR_ON”: 未声明的标识符
+     1>..\Source\init.cpp(238): error C2051: case 表达式不是常量
+     1>..\Source\init.cpp(246): error C2065: “IOCTL_MONITOR_OFF”: 未声明的标识符
+     1>..\Source\init.cpp(246): error C2051: case 表达式不是常量
+     1>..\Source\init.cpp(253): error C2065: “IOCTL_BLOCK_ALL”: 未声明的标识符
+     1>..\Source\init.cpp(253): error C2051: case 表达式不是常量
+     1>..\Source\init.cpp(256): error C3861: “WallBlockAll”:  找不到标识符
+     1>..\Source\init.cpp(268): warning C4065: switch 语句包含“default”但是未包含“case”标签
+     1>..\Source\init.cpp(283): error C3861: “LOG”:  找不到标识符
+     1>..\Source\init.cpp(286): error C3861: “DbgMemTraceInit”:  找不到标识符
+     1>..\Source\init.cpp(299): error C2065: “DEVICE_NAME”: 未声明的标识符
+     1>..\Source\init.cpp(310): error C2065: “DEVICE_DOSNAME”: 未声明的标识符
+     1>..\Source\init.cpp(318): error C3861: “WallLoadGlobalConfig”:  找不到标识符
+     1>..\Source\init.cpp(328): error C3861: “LOG”:  找不到标识符
+     1>..\Source\init.cpp(342): error C3861: “LOG”:  找不到标识符
+     1>..\Source\init.cpp(351): error C2065: “DEVICE_DOSNAME”: 未声明的标识符
+     1>..\Source\init.cpp(355): error C3861: “DbgIsMemLeak”:  找不到标识符
+     1>已完成生成项目“D:\WFP防火墙\FireWall\FireWall\FireWall\FireWall.vcxproj”(Build 个目标)的操作 - 失败。
+
+生成失败。
+
+已用时间 00:00:00.35
