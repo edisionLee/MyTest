@@ -8,30 +8,30 @@
 
 //////////////////////////引用的外部变量////////////////////////////////////
 
-extern              PDEVICE_OBJECT  gDevObj;
+extern PDEVICE_OBJECT		g_dev_obj;
 
 ////////////////////////////////////////////////////////////////////////////
 
 
 
 ///////////////////////////////模块全局变量定义//////////////////////////////
-HANDLE              gEngineHandle = 0;
-HANDLE              g_inject_handle = 0;
-pwall_connect_list     g_connect_list = NULL;
-pwall_packet_list   g_packet_list = NULL;
-UINT32              gAleConnectCalloutId = 0;
-UINT32              gAleRecvAcceptCalloutId = 0;
-UINT64              gAleConnectFilterId = 0;
-UINT64              gAleRecvAcceptFilterId = 0;
-BOOLEAN             gbProcessConfig_other_allow = FALSE;
-BOOLEAN             gbIpConfig_other_allow = TRUE;
-BOOLEAN             gbDnsConfig_other_allow = TRUE;
-BOOLEAN             gb_block_all = FALSE;
-BOOLEAN             gbEnableProcessMonitor=TRUE;
-BOOLEAN             gbEnableIpMonitor=FALSE;
-BOOLEAN             gbEnableDnsMonitor=FALSE;
-BOOLEAN             gbEnableMonitor = FALSE;
-WCHAR               gProcessLogFilePath[MAX_PATH_LEN]={0};
+HANDLE					g_engine_handle = 0;
+HANDLE					g_inject_handle = 0;
+pwall_connect_list		g_connect_list = NULL;
+pwall_packet_list		g_packet_list = NULL;
+UINT32					g_ale_connect_callout_id = 0;
+UINT32					g_ale_recv_accept_callout_id = 0;
+UINT64					g_ale_connect_filter_id = 0;
+UINT64					g_ale_recv_accept_filter_id = 0;
+BOOLEAN					gb_process_config_other_allow = FALSE;
+BOOLEAN					gb_ip_config_other_allow = TRUE;
+BOOLEAN					gb_dns_config_other_allow = TRUE;
+BOOLEAN					gb_block_all = FALSE;
+BOOLEAN					gb_enable_process_monitor = TRUE;
+BOOLEAN					gb_enable_ip_monitor = FALSE;
+BOOLEAN					gb_enable_dns_monitor = FALSE;
+BOOLEAN					gb_enable_monitor = FALSE;
+WCHAR					g_process_log_file_path[MAX_PATH_LEN] = {0};
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -39,94 +39,89 @@ WCHAR               gProcessLogFilePath[MAX_PATH_LEN]={0};
 
 ///////////////////////////函数定义开始//////////////////////////////////////
 
-NTSTATUS
-RegisterCalloutForLayer(
-   IN const GUID* layerKey,
-   IN const GUID* calloutKey,
-   IN FWPS_CALLOUT_CLASSIFY_FN classifyFn,
-   IN FWPS_CALLOUT_NOTIFY_FN notifyFn,
-   IN FWPS_CALLOUT_FLOW_DELETE_NOTIFY_FN flowDeleteNotifyFn,
+NTSTATUS register_callout_for_layer( IN const GUID* layer_key,
+   IN const GUID* callout_key,
+   IN FWPS_CALLOUT_CLASSIFY_FN classify_fn,
+   IN FWPS_CALLOUT_NOTIFY_FN notify_fn,
+   IN FWPS_CALLOUT_FLOW_DELETE_NOTIFY_FN flow_delete_notify_fn,
    OUT UINT32* callout_id,
-   OUT UINT64* filterId
+   OUT UINT64* filter_id
    )
 {
-    NTSTATUS        status = STATUS_SUCCESS;
+    NTSTATUS					status = STATUS_SUCCESS;
 
-    FWPS_CALLOUT    sCallout = {0};
+    FWPS_CALLOUT				s_callout = {0};
 
-    FWPM_FILTER     mFilter = {0};
-    FWPM_FILTER_CONDITION mFilter_condition[1] = {0};
+    FWPM_FILTER					m_filter = {0};
+    FWPM_FILTER_CONDITION		m_filter_condition[1] = {0};
 
-    FWPM_CALLOUT    mCallout = {0};
-    FWPM_DISPLAY_DATA mDispData = {0};
+    FWPM_CALLOUT				m_callout = {0};
+    FWPM_DISPLAY_DATA			m_display_data = {0};
 
-    BOOLEAN         bCalloutRegistered = FALSE; //用于失败退出时检测状态，正确释放已经申请的资源
+    BOOLEAN						b_callout_registered = FALSE; //用于失败退出时检测状态，正确释放已经申请的资源
 
     LOG("into\n");
 
-    sCallout.calloutKey = *calloutKey;
-    sCallout.classifyFn = classifyFn;
-    sCallout.flowDeleteFn = flowDeleteNotifyFn;
-    sCallout.notifyFn = notifyFn;
+	s_callout.calloutKey = *callout_key;
+	s_callout.classifyFn = classify_fn;
+	s_callout.flowDeleteFn = flow_delete_notify_fn;
+	s_callout.notifyFn = notify_fn;
 
-    status = FwpsCalloutRegister( gDevObj, &sCallout, callout_id );
+	status = FwpsCalloutRegister( g_dev_obj, &s_callout, callout_id );
     if( !NT_SUCCESS(status))
         goto exit;
 
-    bCalloutRegistered = TRUE;
+    b_callout_registered = TRUE;
 
-    mDispData.name = L"Wall ALE Callout";
-    mDispData.description = L"Callout that capture the wall acquired event";
+    m_display_data.name = L"Wall ALE Callout";
+    m_display_data.description = L"Callout that capture the wall acquired event";
 
-    mCallout.applicableLayer = *layerKey;
-    mCallout.calloutKey = *calloutKey;
-    mCallout.displayData = mDispData;
+    m_callout.applicableLayer = *layer_key;
+    m_callout.calloutKey = *callout_key;
+    m_callout.displayData = m_display_data;
 
-    status = FwpmCalloutAdd( gEngineHandle,&mCallout,NULL,NULL);
+    status = FwpmCalloutAdd( g_engine_handle, &m_callout, NULL, NULL);
     if( !NT_SUCCESS(status))
         goto exit;
 
-    mFilter.action.calloutKey = *calloutKey;
-    mFilter.action.type = FWP_ACTION_CALLOUT_TERMINATING;
-    mFilter.displayData.name = L"Wall Filter";
-    mFilter.displayData.description = L"filter that used to capture the wall needed event";
-    mFilter.layerKey = *layerKey;
-    mFilter.numFilterConditions = 0;
-    mFilter.filterCondition = mFilter_condition;
-    mFilter.subLayerKey = FWPM_SUBLAYER_UNIVERSAL;
-    mFilter.weight.type = FWP_EMPTY;
+    m_filter.action.calloutKey = *callout_key;
+    m_filter.action.type = FWP_ACTION_CALLOUT_TERMINATING;
+    m_filter.displayData.name = L"Wall Filter";
+    m_filter.displayData.description = L"filter that used to capture the wall needed event";
+    m_filter.layerKey = *layer_key;
+    m_filter.numFilterConditions = 0;
+    m_filter.filterCondition = m_filter_condition;
+    m_filter.subLayerKey = FWPM_SUBLAYER_UNIVERSAL;
+    m_filter.weight.type = FWP_EMPTY;
     
-    //initialize mFilter_condition
+    //initialize m_filter_condition
     //...........................
 
-    status = FwpmFilterAdd( gEngineHandle,&mFilter,NULL,filterId );
+    status = FwpmFilterAdd( g_engine_handle, &m_filter, NULL, filter_id );
 
     if( !NT_SUCCESS( status))
         goto exit;
 
 exit:
-    if( !NT_SUCCESS(status))
-    {
+    if( !NT_SUCCESS(status))	{
         LOG("ERROR OCCURED!\n");
 
-        if( bCalloutRegistered )
-        {
+        if( b_callout_registered )	{
             FwpsCalloutUnregisterById( *callout_id );
         }
     }
     return status;
 }
 
-NTSTATUS
-wall_register_callouts()
+NTSTATUS wall_register_callouts ()
 /*++
 --*/
 {
-    NTSTATUS    status = STATUS_SUCCESS;
+    NTSTATUS		status = STATUS_SUCCESS;
 
     //用于出错时正确销毁已经申请到的资源
-    BOOLEAN     bInTransaction = FALSE;
-    BOOLEAN     bEngineOpened = FALSE;
+    BOOLEAN			b_in_transaction = FALSE;
+    BOOLEAN			b_engine_opened = FALSE;
 
     FWPM_SESSION session = {0};
 
@@ -138,121 +133,118 @@ wall_register_callouts()
                             RPC_C_AUTHN_WINNT,
                             NULL,
                             &session,
-                            &gEngineHandle );
+                            &g_engine_handle );
     if( !NT_SUCCESS(status))
         goto exit;
-    bEngineOpened = TRUE;
+    b_engine_opened = TRUE;
     
-    status = FwpmTransactionBegin( gEngineHandle,0 );
-    if( !NT_SUCCESS(status))
+    status = FwpmTransactionBegin( g_engine_handle, 0 );
+    if( !NT_SUCCESS(status) )
         goto exit;
 
-    bInTransaction = TRUE;
+    b_in_transaction = TRUE;
 
-    status = RegisterCalloutForLayer( 
-        &FWPM_LAYER_ALE_AUTH_CONNECT_V4 ,
+    status = register_callout_for_layer( &FWPM_LAYER_ALE_AUTH_CONNECT_V4 ,
         &WALL_ALE_AUTH_CONNECT_CALLOUT_V4,
         wall_ale_connect_classify,
-        WallALEConnectNotify,
+        wall_ale_connect_notify,
         wall_ale_connect_flow_delete,
-        &gAleConnectCalloutId,
-        &gAleConnectFilterId);
+        &g_ale_connect_callout_id,
+        &g_ale_connect_filter_id);
     if( !NT_SUCCESS(status))
         goto exit;
 
-    status = RegisterCalloutForLayer( 
-        &FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4 ,
+    status = register_callout_for_layer( &FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4 ,
         &WALL_ALE_AUTH_RECV_ACCEPT_CALLOUT_V4,
         wall_ale_recv_accept_classify,
         wall_ale_recv_accept_notify,
         wall_ale_recv_accept_flow_delete,//没必要
-        &gAleRecvAcceptCalloutId,
-        &gAleRecvAcceptFilterId);
+        &g_ale_recv_accept_callout_id,
+        &g_ale_recv_accept_filter_id);
     if( !NT_SUCCESS(status))
         goto exit;
 
-    status = FwpmTransactionCommit(gEngineHandle );
-    if( !NT_SUCCESS(status))
+    status = FwpmTransactionCommit( g_engine_handle );
+    if( !NT_SUCCESS(status) )
         goto exit;
 
-    bInTransaction = FALSE;
+    b_in_transaction = FALSE;
 
 exit:
-    if( !NT_SUCCESS(status))
-    {
+    if( !NT_SUCCESS(status) )	{
         LOG("ERROR OCCURED!\n");
 
-        if( bInTransaction)
-        {
-            FwpmTransactionAbort( gEngineHandle );
+        if( b_in_transaction)	{
+            FwpmTransactionAbort( g_engine_handle );
         }
 
-        if( bEngineOpened )
-        {
-            FwpmEngineClose( gEngineHandle );
-            gEngineHandle = 0;
+        if( b_engine_opened )	{
+            FwpmEngineClose( g_engine_handle );
+            g_engine_handle = 0;
         }
     }
 
     return status;
 }
 
-NTSTATUS
-wall_un_register_callouts()
+NTSTATUS wall_un_register_callouts()
 /*++
 --*/
 {
     LOG("into\n");
 
-    if( gEngineHandle != 0 )
-    {
-        FwpmFilterDeleteById( gEngineHandle,gAleConnectFilterId );
-        FwpmFilterDeleteById( gEngineHandle,gAleRecvAcceptFilterId);
-        FwpmCalloutDeleteById( gEngineHandle,gAleConnectCalloutId );
-        FwpmCalloutDeleteById( gEngineHandle,gAleRecvAcceptCalloutId );
+    if( NULL !=g_engine_handle ) {
+        FwpmFilterDeleteById ( g_engine_handle, g_ale_connect_filter_id );
+        FwpmFilterDeleteById ( g_engine_handle, g_ale_recv_accept_filter_id );
+        FwpmCalloutDeleteById ( g_engine_handle, g_ale_connect_callout_id );
+        FwpmCalloutDeleteById ( g_engine_handle, g_ale_recv_accept_callout_id );
 
-        FwpmEngineClose( gEngineHandle );
-        gEngineHandle = 0;
-        gAleRecvAcceptFilterId = 0;
-        gAleRecvAcceptFilterId = 0;
+        FwpmEngineClose( g_engine_handle );
+        g_engine_handle = 0;
+        g_ale_recv_accept_filter_id = 0;
+        g_ale_recv_accept_filter_id = 0;
 
     }
-    FwpsCalloutUnregisterById( gAleConnectCalloutId );
-    gAleConnectCalloutId = 0;
-    FwpsCalloutUnregisterById( gAleRecvAcceptCalloutId );
-    gAleRecvAcceptCalloutId = 0;
+    FwpsCalloutUnregisterById( g_ale_connect_callout_id );
+    g_ale_connect_callout_id = 0;
+    FwpsCalloutUnregisterById( g_ale_recv_accept_callout_id );
+    g_ale_recv_accept_callout_id = 0;
 
     return STATUS_SUCCESS;
 }
 
 
-VOID
-wall_write_connect_log_data( IN PVOID Context )
+VOID wall_write_connect_log_data ( IN PVOID context )
 /*++
 
 注意：此函数运行在PASSIVE_LEVEL ，这里被工作线程调用
 --*/
 {
-    NTSTATUS                    status = STATUS_SUCCESS;
-    TIME_FIELDS                 time;
-    WCHAR                       buffer[100];
-    UNICODE_STRING              uniStr={0};
-    OBJECT_ATTRIBUTES           objAttr={0};
-    IO_STATUS_BLOCK             ioBlock;
-    HANDLE                      hDatabaseLogFile;
-    PUNICODE_STRING             data = (PUNICODE_STRING)Context;
+    NTSTATUS			status = STATUS_SUCCESS;
+    TIME_FIELDS			time;
+    WCHAR				buffer[100] = L"";
+    UNICODE_STRING		unicode_str = {0};
+    OBJECT_ATTRIBUTES	object_attr = {0};
+	IO_STATUS_BLOCK		io_block = {0};
+    HANDLE				h_database_log_file = NULL;
+	PUNICODE_STRING		data = NULL;
+
+	if (NULL != context)	{
+		data = ( PUNICODE_STRING )context;
+	}
+	
 
     LOG("into\n");
     
-    ASSERT( data != NULL );
+    ASSERT( NULL != data );
 
-    //KdPrint(("hash(%wZ)=%x\n",data,HashUnicodeString( data )));
-    RtlInitUnicodeString( &uniStr,gProcessLogFilePath );
-    InitializeObjectAttributes( &objAttr,&uniStr,OBJ_KERNEL_HANDLE,NULL,NULL );
-    status = ZwCreateFile( &hDatabaseLogFile,
+    //KdPrint(("hash(%wZ)=%x\n",data,hash_unicode_string( data )));
+    RtlInitUnicodeString ( &unicode_str, g_process_log_file_path );
+    InitializeObjectAttributes( &object_attr, &unicode_str, OBJ_KERNEL_HANDLE, NULL, NULL );
+    status = ZwCreateFile( &h_database_log_file,
                             FILE_APPEND_DATA/*FILE_ALL_ACCESS*/,
-                            &objAttr,
-                            &ioBlock,
+                            &object_attr,
+                            &io_block,
                             NULL,
                             FILE_ATTRIBUTE_NORMAL,
                             FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -260,8 +252,7 @@ wall_write_connect_log_data( IN PVOID Context )
                             FILE_SYNCHRONOUS_IO_NONALERT,
                             NULL,
                             0);
-    if( !NT_SUCCESS( status ))
-    {
+    if( !NT_SUCCESS( status ) )	{
         KdPrint(("file create ERROR!\n"));
         goto exit;
     }
@@ -278,11 +269,11 @@ wall_write_connect_log_data( IN PVOID Context )
             time.Second);
 #pragma warning(pop)
 
-    status = ZwWriteFile( hDatabaseLogFile,
+    status = ZwWriteFile( h_database_log_file,
                           NULL,
                           NULL,
                           NULL,
-                          &ioBlock,
+                          &io_block,
                           buffer,
                           wcslen( buffer ) * sizeof(WCHAR),
                           NULL,
@@ -293,11 +284,11 @@ wall_write_connect_log_data( IN PVOID Context )
         goto exit;
     }
 
-    status = ZwWriteFile( hDatabaseLogFile,
+    status = ZwWriteFile( h_database_log_file,
                           NULL,
                           NULL,
                           NULL,
-                          &ioBlock,
+                          &io_block,
                           data->Buffer,
                           data->Length,
                           NULL,
@@ -308,11 +299,11 @@ wall_write_connect_log_data( IN PVOID Context )
         goto exit;
     }
 
-    status = ZwWriteFile( hDatabaseLogFile,
+    status = ZwWriteFile( h_database_log_file,
                           NULL,
                           NULL,
                           NULL,
-                          &ioBlock,
+                          &io_block,
                           L"\r\n",
                           2 * sizeof(WCHAR),
                           NULL,
@@ -324,8 +315,8 @@ wall_write_connect_log_data( IN PVOID Context )
     }
 
 exit:
-    if( hDatabaseLogFile != NULL )
-        ZwClose( hDatabaseLogFile );
+    if( h_database_log_file != NULL )
+        ZwClose( h_database_log_file );
 
     if( data != NULL )
         my_ex_free_pool( data );
@@ -334,19 +325,17 @@ exit:
 }
 
 
-NTSTATUS 
-wall_create_connect_list()
+NTSTATUS wall_create_connect_list ()
 /*++
 --*/
 {
-    pwall_connect_list p = NULL;
-    NTSTATUS        status = STATUS_SUCCESS;
+    pwall_connect_list		p = NULL;
+    NTSTATUS				status = STATUS_SUCCESS;
 
     LOG("into\n");
 
-    p = (pwall_connect_list)my_ex_allocate_pool( sizeof( WALL_CONN_LIST));
-    if( p == NULL )
-    {
+    p = (pwall_connect_list) my_ex_allocate_pool( sizeof( wall_connect_list) );
+    if( NULL == p )	{
         status = STATUS_UNSUCCESSFUL;
         goto exit;
     }
@@ -360,19 +349,17 @@ exit:
     return status;
 }
 
-NTSTATUS 
-WallCreatePacketList()
+NTSTATUS wall_create_packet_list()
 /*++
 --*/
 {
-    pwall_connect_list p = NULL;
-    NTSTATUS        status = STATUS_SUCCESS;
+    pwall_connect_list		p = NULL;
+    NTSTATUS				status = STATUS_SUCCESS;
 
     LOG("into\n");
 
-    p = (pwall_connect_list)my_ex_allocate_pool( sizeof( WALL_CONN_LIST));
-    if( p == NULL )
-    {
+    p = ( pwall_connect_list )my_ex_allocate_pool( sizeof( wall_connect_list) );
+    if( NULL == p )	{
         status = STATUS_UNSUCCESSFUL;
         goto exit;
     }
@@ -386,30 +373,28 @@ exit:
     return status;
 }
 
-VOID
-wall_destroy_connect_list()
+VOID wall_destroy_connect_list ()
 /*++
 --*/
 {
     LOG("into\n");
 
-    if( g_connect_list == NULL)
+    if( NULL == g_connect_list )
         return;
 
-    ASSERT( IsListEmpty( &g_connect_list->list ));
+    ASSERT( IsListEmpty( &g_connect_list->list ) );
     my_ex_free_pool( g_connect_list );
     g_connect_list = NULL;
 
 }
 
-VOID
-wall_destroy_packet_list()
+VOID wall_destroy_packet_list ()
 /*++
 --*/
 {
     LOG("into\n");
 
-    if( g_packet_list == NULL )
+    if( NULL == g_packet_list )
         return;
 
     ASSERT( IsListEmpty( &g_packet_list->list ));
@@ -417,173 +402,164 @@ wall_destroy_packet_list()
     g_packet_list = NULL;
 }
 
-NTSTATUS
-wall_create_injection_handle()
+NTSTATUS wall_create_injection_handle ()
 /*++
 --*/
 {
-    NTSTATUS status = STATUS_SUCCESS;
+    NTSTATUS		status = STATUS_SUCCESS;
 
     LOG("into\n");
 
-    status = FwpsInjectionHandleCreate( AF_UNSPEC,FWPS_INJECTION_TYPE_TRANSPORT,&g_inject_handle);
+    status = FwpsInjectionHandleCreate ( AF_UNSPEC, FWPS_INJECTION_TYPE_TRANSPORT, &g_inject_handle);
 
     return status;
 }
 
-NTSTATUS
-wall_destroy_injection_handle()
+NTSTATUS wall_destroy_injection_handle ()
 /*++
 --*/
 {
-    NTSTATUS status = STATUS_SUCCESS;
+    NTSTATUS		status = STATUS_SUCCESS;
 
     LOG("into\n");
 
-    status = FwpsInjectionHandleDestroy( g_inject_handle );
-    if( NT_SUCCESS( status ))g_inject_handle = NULL;
+    status = FwpsInjectionHandleDestroy ( g_inject_handle );
+    if( NT_SUCCESS( status ) )
+		g_inject_handle = NULL;
 
-    ASSERT( g_inject_handle == NULL);
+    ASSERT( NULL ==g_inject_handle );
     return status;
 }
 
-__inline
-void
-GetNetwork5TupleIndexesForLayer(
-   IN UINT16 layer_id,
-   OUT UINT* localAddressIndex,
-   OUT UINT* remoteAddressIndex,
-   OUT UINT* localPortIndex,
-   OUT UINT* remotePortIndex,
-   OUT UINT* protocolIndex
+__inline void get_network_5_tuple_indexes_for_layer( IN UINT16 layer_id,
+   OUT UINT* local_address_index,
+   OUT UINT* remote_address_index,
+   OUT UINT* local_port_index,
+   OUT UINT* remote_port_index,
+   OUT UINT* protocol_index
    )
 {
-   switch (layer_id)
-   {
+   switch (layer_id)	{
    case FWPS_LAYER_ALE_AUTH_CONNECT_V4:
-      *localAddressIndex = FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_LOCAL_ADDRESS;
-      *remoteAddressIndex = FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_ADDRESS;
-      *localPortIndex = FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_LOCAL_PORT;
-      *remotePortIndex = FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_PORT;
-      *protocolIndex = FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_PROTOCOL;
+      *local_address_index = FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_LOCAL_ADDRESS;
+      *remote_address_index = FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_ADDRESS;
+      *local_port_index = FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_LOCAL_PORT;
+      *remote_port_index = FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_PORT;
+      *protocol_index = FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_PROTOCOL;
       break;
    case FWPS_LAYER_ALE_AUTH_CONNECT_V6:
-      *localAddressIndex = FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_LOCAL_ADDRESS;
-      *remoteAddressIndex = FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_REMOTE_ADDRESS;
-      *localPortIndex = FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_LOCAL_PORT;
-      *remotePortIndex = FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_REMOTE_PORT;
-      *protocolIndex = FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_PROTOCOL;
+      *local_address_index = FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_LOCAL_ADDRESS;
+      *remote_address_index = FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_REMOTE_ADDRESS;
+      *local_port_index = FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_LOCAL_PORT;
+      *remote_port_index = FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_REMOTE_PORT;
+      *protocol_index = FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_PROTOCOL;
       break;
    case FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V4:
-      *localAddressIndex = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V4_IP_LOCAL_ADDRESS;
-      *remoteAddressIndex = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V4_IP_REMOTE_ADDRESS;
-      *localPortIndex = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V4_IP_LOCAL_PORT;
-      *remotePortIndex = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V4_IP_REMOTE_PORT;
-      *protocolIndex = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V4_IP_PROTOCOL;
+      *local_address_index = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V4_IP_LOCAL_ADDRESS;
+      *remote_address_index = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V4_IP_REMOTE_ADDRESS;
+      *local_port_index = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V4_IP_LOCAL_PORT;
+      *remote_port_index = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V4_IP_REMOTE_PORT;
+      *protocol_index = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V4_IP_PROTOCOL;
       break;
    case FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6:
-      *localAddressIndex = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V6_IP_LOCAL_ADDRESS;
-      *remoteAddressIndex = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V6_IP_REMOTE_ADDRESS;
-      *localPortIndex = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V6_IP_LOCAL_PORT;
-      *remotePortIndex = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V6_IP_REMOTE_PORT;
-      *protocolIndex = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V6_IP_PROTOCOL;
+      *local_address_index = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V6_IP_LOCAL_ADDRESS;
+      *remote_address_index = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V6_IP_REMOTE_ADDRESS;
+      *local_port_index = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V6_IP_LOCAL_PORT;
+      *remote_port_index = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V6_IP_REMOTE_PORT;
+      *protocol_index = FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V6_IP_PROTOCOL;
       break;
    case FWPS_LAYER_OUTBOUND_TRANSPORT_V4:
-      *localAddressIndex = FWPS_FIELD_OUTBOUND_TRANSPORT_V4_IP_LOCAL_ADDRESS;
-      *remoteAddressIndex = FWPS_FIELD_OUTBOUND_TRANSPORT_V4_IP_REMOTE_ADDRESS;
-      *localPortIndex = FWPS_FIELD_OUTBOUND_TRANSPORT_V4_IP_LOCAL_PORT;
-      *remotePortIndex = FWPS_FIELD_OUTBOUND_TRANSPORT_V4_IP_REMOTE_PORT;
-      *protocolIndex = FWPS_FIELD_OUTBOUND_TRANSPORT_V4_IP_PROTOCOL;
+      *local_address_index = FWPS_FIELD_OUTBOUND_TRANSPORT_V4_IP_LOCAL_ADDRESS;
+      *remote_address_index = FWPS_FIELD_OUTBOUND_TRANSPORT_V4_IP_REMOTE_ADDRESS;
+      *local_port_index = FWPS_FIELD_OUTBOUND_TRANSPORT_V4_IP_LOCAL_PORT;
+      *remote_port_index = FWPS_FIELD_OUTBOUND_TRANSPORT_V4_IP_REMOTE_PORT;
+      *protocol_index = FWPS_FIELD_OUTBOUND_TRANSPORT_V4_IP_PROTOCOL;
       break;
    case FWPS_LAYER_OUTBOUND_TRANSPORT_V6:
-      *localAddressIndex = FWPS_FIELD_OUTBOUND_TRANSPORT_V6_IP_LOCAL_ADDRESS;
-      *remoteAddressIndex = FWPS_FIELD_OUTBOUND_TRANSPORT_V6_IP_REMOTE_ADDRESS;
-      *localPortIndex = FWPS_FIELD_OUTBOUND_TRANSPORT_V6_IP_LOCAL_PORT;
-      *remotePortIndex = FWPS_FIELD_OUTBOUND_TRANSPORT_V6_IP_REMOTE_PORT;
-      *protocolIndex = FWPS_FIELD_OUTBOUND_TRANSPORT_V6_IP_PROTOCOL;
+      *local_address_index = FWPS_FIELD_OUTBOUND_TRANSPORT_V6_IP_LOCAL_ADDRESS;
+      *remote_address_index = FWPS_FIELD_OUTBOUND_TRANSPORT_V6_IP_REMOTE_ADDRESS;
+      *local_port_index = FWPS_FIELD_OUTBOUND_TRANSPORT_V6_IP_LOCAL_PORT;
+      *remote_port_index = FWPS_FIELD_OUTBOUND_TRANSPORT_V6_IP_REMOTE_PORT;
+      *protocol_index = FWPS_FIELD_OUTBOUND_TRANSPORT_V6_IP_PROTOCOL;
       break;
    case FWPS_LAYER_INBOUND_TRANSPORT_V4:
-      *localAddressIndex = FWPS_FIELD_INBOUND_TRANSPORT_V4_IP_LOCAL_ADDRESS;
-      *remoteAddressIndex = FWPS_FIELD_INBOUND_TRANSPORT_V4_IP_REMOTE_ADDRESS;
-      *localPortIndex = FWPS_FIELD_INBOUND_TRANSPORT_V4_IP_LOCAL_PORT;
-      *remotePortIndex = FWPS_FIELD_INBOUND_TRANSPORT_V4_IP_REMOTE_PORT;
-      *protocolIndex = FWPS_FIELD_INBOUND_TRANSPORT_V4_IP_PROTOCOL;
+      *local_address_index = FWPS_FIELD_INBOUND_TRANSPORT_V4_IP_LOCAL_ADDRESS;
+      *remote_address_index = FWPS_FIELD_INBOUND_TRANSPORT_V4_IP_REMOTE_ADDRESS;
+      *local_port_index = FWPS_FIELD_INBOUND_TRANSPORT_V4_IP_LOCAL_PORT;
+      *remote_port_index = FWPS_FIELD_INBOUND_TRANSPORT_V4_IP_REMOTE_PORT;
+      *protocol_index = FWPS_FIELD_INBOUND_TRANSPORT_V4_IP_PROTOCOL;
       break;
    case FWPS_LAYER_INBOUND_TRANSPORT_V6:
-      *localAddressIndex = FWPS_FIELD_INBOUND_TRANSPORT_V6_IP_LOCAL_ADDRESS;
-      *remoteAddressIndex = FWPS_FIELD_INBOUND_TRANSPORT_V6_IP_REMOTE_ADDRESS;
-      *localPortIndex = FWPS_FIELD_INBOUND_TRANSPORT_V6_IP_LOCAL_PORT;
-      *remotePortIndex = FWPS_FIELD_INBOUND_TRANSPORT_V6_IP_REMOTE_PORT;
-      *protocolIndex = FWPS_FIELD_INBOUND_TRANSPORT_V6_IP_PROTOCOL;
+      *local_address_index = FWPS_FIELD_INBOUND_TRANSPORT_V6_IP_LOCAL_ADDRESS;
+      *remote_address_index = FWPS_FIELD_INBOUND_TRANSPORT_V6_IP_REMOTE_ADDRESS;
+      *local_port_index = FWPS_FIELD_INBOUND_TRANSPORT_V6_IP_LOCAL_PORT;
+      *remote_port_index = FWPS_FIELD_INBOUND_TRANSPORT_V6_IP_REMOTE_PORT;
+      *protocol_index = FWPS_FIELD_INBOUND_TRANSPORT_V6_IP_PROTOCOL;
       break;
    default:
-      *localAddressIndex = UINT_MAX;
-      *remoteAddressIndex = UINT_MAX;
-      *localPortIndex = UINT_MAX;
-      *remotePortIndex = UINT_MAX;
-      *protocolIndex = UINT_MAX;      
+      *local_address_index = UINT_MAX;
+      *remote_address_index = UINT_MAX;
+      *local_port_index = UINT_MAX;
+      *remote_port_index = UINT_MAX;
+      *protocol_index = UINT_MAX;      
       ASSERT(0);
    }
 }
 
-void
-FillNetwork5Tuple(
-   IN const FWPS_INCOMING_VALUES0* in_fixed_values,
+void FillNetwork5Tuple( IN const FWPS_INCOMING_VALUES0* in_fixed_values,
    IN ADDRESS_FAMILY address_family,
    IN OUT wall_pended_packet* packet
    )
 {
-   UINT localAddrIndex;
-   UINT remoteAddrIndex;
-   UINT localPortIndex;
-   UINT remotePortIndex;
-   UINT protocolIndex;
+   UINT		local_addr_index = -1;
+   UINT		remote_addr_index = -1;
+   UINT		local_port_index = -1;
+   UINT		remote_port_index = -1;
+   UINT		protocol_index = -1;
 
    LOG("into\n");
 
-   GetNetwork5TupleIndexesForLayer(
-      in_fixed_values->layer_id,
-      &localAddrIndex,
-      &remoteAddrIndex,
-      &localPortIndex,
-      &remotePortIndex,
-      &protocolIndex
+   get_network_5_tuple_indexes_for_layer( in_fixed_values->layerId,
+      &local_addr_index,
+      &remote_addr_index,
+      &local_port_index,
+      &remote_port_index,
+      &protocol_index
       );
 
-   if (address_family == AF_INET)
+   if ( AF_INET == address_family )
    {
-      packet->ipv4LocalAddr = 
-         RtlUlongByteSwap( /* host-order -> network-order conversion */
-            in_fixed_values->incomingValue[localAddrIndex].value.uint32
+      packet->ipv4LocalAddr = RtlUlongByteSwap( /* host-order -> network-order conversion */
+            in_fixed_values->incomingValue[local_addr_index].value.uint32
             );
       packet->ipv4RemoteAddr = 
          RtlUlongByteSwap( /* host-order -> network-order conversion */
-            in_fixed_values->incomingValue[remoteAddrIndex].value.uint32
+            in_fixed_values->incomingValue[remote_addr_index].value.uint32
             );
    }
    else
    {
       RtlCopyMemory(
          (UINT8*)&packet->localAddr,
-         in_fixed_values->incomingValue[localAddrIndex].value.byteArray16,
+         in_fixed_values->incomingValue[local_addr_index].value.byteArray16,
          sizeof(FWP_BYTE_ARRAY16)
          );
       RtlCopyMemory(
          (UINT8*)&packet->remoteAddr,
-         in_fixed_values->incomingValue[remoteAddrIndex].value.byteArray16,
+         in_fixed_values->incomingValue[remote_addr_index].value.byteArray16,
          sizeof(FWP_BYTE_ARRAY16)
          );
    }
 
    packet->localPort = 
       RtlUshortByteSwap(
-         in_fixed_values->incomingValue[localPortIndex].value.uint16
+         in_fixed_values->incomingValue[local_port_index].value.uint16
          );
    packet->remotePort = 
       RtlUshortByteSwap(
-         in_fixed_values->incomingValue[remotePortIndex].value.uint16
+         in_fixed_values->incomingValue[remote_port_index].value.uint16
          );
-   packet->protocol = in_fixed_values->incomingValue[protocolIndex].value.uint8;
+   packet->protocol = in_fixed_values->incomingValue[protocol_index].value.uint8;
 
    return;
 }
@@ -661,26 +637,26 @@ is_matching_connect_packet(
    IN wall_pended_packet* pended_packet
    )
 {
-   UINT localAddrIndex;
-   UINT remoteAddrIndex;
-   UINT localPortIndex;
-   UINT remotePortIndex;
-   UINT protocolIndex;
+   UINT local_addr_index;
+   UINT remote_addr_index;
+   UINT local_port_index;
+   UINT remote_port_index;
+   UINT protocol_index;
 
    ASSERT(pended_packet->type == WALL_CONNECT_PACKET);
 
    LOG("into\n");
 
-   GetNetwork5TupleIndexesForLayer(
+   get_network_5_tuple_indexes_for_layer(
       in_fixed_values->layer_id,
-      &localAddrIndex,
-      &remoteAddrIndex,
-      &localPortIndex,
-      &remotePortIndex,
-      &protocolIndex
+      &local_addr_index,
+      &remote_addr_index,
+      &local_port_index,
+      &remote_port_index,
+      &protocol_index
       );
 
-   if(localAddrIndex == UINT_MAX)
+   if(local_addr_index == UINT_MAX)
    {
       return FALSE;
    }
@@ -695,21 +671,21 @@ is_matching_connect_packet(
       return FALSE;
    }
 
-   if (in_fixed_values->incomingValue[protocolIndex].value.uint8 != 
+   if (in_fixed_values->incomingValue[protocol_index].value.uint8 != 
        pended_packet->protocol)
    {
       return FALSE;
    }
 
    if (RtlUshortByteSwap(
-         in_fixed_values->incomingValue[localPortIndex].value.uint16
+         in_fixed_values->incomingValue[local_port_index].value.uint16
          ) != pended_packet->localPort)
    {
       return FALSE;
    }
 
    if (RtlUshortByteSwap(
-         in_fixed_values->incomingValue[remotePortIndex].value.uint16
+         in_fixed_values->incomingValue[remote_port_index].value.uint16
          ) != pended_packet->remotePort)
    {
       return FALSE;
@@ -719,11 +695,11 @@ is_matching_connect_packet(
    {
       UINT32 ipv4LocalAddr = 
          RtlUlongByteSwap(
-            in_fixed_values->incomingValue[localAddrIndex].value.uint32
+            in_fixed_values->incomingValue[local_addr_index].value.uint32
             );
       UINT32 ipv4RemoteAddr = 
          RtlUlongByteSwap( /* host-order -> network-order conversion */
-            in_fixed_values->incomingValue[remoteAddrIndex].value.uint32
+            in_fixed_values->incomingValue[remote_addr_index].value.uint32
             );
       if (ipv4LocalAddr != pended_packet->ipv4LocalAddr)
       {
@@ -738,7 +714,7 @@ is_matching_connect_packet(
    else
    {
       if (RtlCompareMemory(
-            in_fixed_values->incomingValue[localAddrIndex].value.byteArray16, 
+            in_fixed_values->incomingValue[local_addr_index].value.byteArray16, 
             &pended_packet->localAddr,
             sizeof(FWP_BYTE_ARRAY16)) !=  sizeof(FWP_BYTE_ARRAY16))
       {
@@ -746,7 +722,7 @@ is_matching_connect_packet(
       }
 
       if (RtlCompareMemory(
-            in_fixed_values->incomingValue[remoteAddrIndex].value.byteArray16, 
+            in_fixed_values->incomingValue[remote_addr_index].value.byteArray16, 
             &pended_packet->remoteAddr,
             sizeof(FWP_BYTE_ARRAY16)) !=  sizeof(FWP_BYTE_ARRAY16))
       {
@@ -847,7 +823,7 @@ wall_allocate_and_init_pended_packet(
 
        //
        // Reference the net buffer list to make it accessible outside of 
-       // classifyFn.
+       // classify_fn.
        //
        FwpsReferenceNetBufferList0(pended_packet->netBufferList, TRUE);
     }
@@ -944,12 +920,12 @@ wall_allocate_and_init_pended_packet(
     if( status == STATUS_SUCCESS )
     {
         KdPrint(("PNAME:%wZ\n",&dos_name ));
-        pended_packet->crcProcessPath = HashUnicodeString( &dos_name );
+        pended_packet->crcProcessPath = hash_unicode_string( &dos_name );
     }
     else
     {
         KdPrint(("PNAME:%wZ\n",&dev_name ));
-        pended_packet->crcProcessPath = HashUnicodeString( &dev_name );
+        pended_packet->crcProcessPath = hash_unicode_string( &dev_name );
     }
     KdPrint(("crc = %x\n",pended_packet->crcProcessPath ));
 
@@ -1263,12 +1239,12 @@ Exit:
 
 
 VOID
-wall_inspect_wall_packets( IN PVOID Context )
+wall_inspect_wall_packets( IN PVOID context )
 /*++
 功能描述：处理被缓冲的packet
 
 参数说明：
-    Context:未定义
+    context:未定义
 
 返回值说明：无返回值
 
@@ -1313,11 +1289,11 @@ wall_inspect_wall_packets( IN PVOID Context )
 
         if( gb_block_all )
             packet->authConnectDecision = FWP_ACTION_BLOCK;
-        else if( gbEnableProcessMonitor && !wall_is_process_traffic_permit(packet))
+        else if( gb_enable_process_monitor && !wall_is_process_traffic_permit(packet))
             packet->authConnectDecision = FWP_ACTION_BLOCK;
-        else if ( gbEnableIpMonitor && !wall_is_ip_traffic_permit(packet))
+        else if ( gb_enable_ip_monitor && !wall_is_ip_traffic_permit(packet))
             packet->authConnectDecision = FWP_ACTION_BLOCK;
-        else if( gbEnableDnsMonitor && !wall_is_dns_traffic_permit( packet ))
+        else if( gb_enable_dns_monitor && !wall_is_dns_traffic_permit( packet ))
             packet->authConnectDecision = FWP_ACTION_BLOCK;
         else
             packet->authConnectDecision = FWP_ACTION_PERMIT;
@@ -1447,17 +1423,17 @@ VOID    wall_load_global_config()
     if( !NT_SUCCESS( status ))
     {
         KdPrint(("query value key(ProcessMonitorEnable) failed!(%x)\n",status));
-        gbEnableProcessMonitor = TRUE;
+        gb_enable_process_monitor = TRUE;
     }
     else
     {
         pKeyValuePartialInfor = (PKEY_VALUE_PARTIAL_INFORMATION)RetInfor;
         ASSERT( pKeyValuePartialInfor->Type == REG_DWORD );
         if( *(UINT32 *)pKeyValuePartialInfor->Data == 0 )
-            gbEnableProcessMonitor = FALSE;
+            gb_enable_process_monitor = FALSE;
         else
-            gbEnableProcessMonitor = TRUE;
-        KdPrint(("global_config:gbEnableProcessMonitor = %x\n",gbEnableProcessMonitor ));
+            gb_enable_process_monitor = TRUE;
+        KdPrint(("global_config:gb_enable_process_monitor = %x\n",gb_enable_process_monitor ));
     }
 
     RtlInitUnicodeString( &uniValueName,L"IpMonitorEnable");
@@ -1470,17 +1446,17 @@ VOID    wall_load_global_config()
     if( !NT_SUCCESS( status ))
     {
         KdPrint(("query value key(IpMonitorEnable) failed!\n"));
-        gbEnableIpMonitor = FALSE;
+        gb_enable_ip_monitor = FALSE;
     }
     else
     {
         pKeyValuePartialInfor = (PKEY_VALUE_PARTIAL_INFORMATION)RetInfor;
         ASSERT( pKeyValuePartialInfor->Type == REG_DWORD );
         if( *(UINT32 *)pKeyValuePartialInfor->Data == 0 )
-            gbEnableIpMonitor = FALSE;
+            gb_enable_ip_monitor = FALSE;
         else
-            gbEnableIpMonitor = TRUE;
-        KdPrint(("global_config:gbEnableIpMonitor = %x\n",gbEnableIpMonitor ));
+            gb_enable_ip_monitor = TRUE;
+        KdPrint(("global_config:gb_enable_ip_monitor = %x\n",gb_enable_ip_monitor ));
     }
 
     RtlInitUnicodeString( &uniValueName,L"DnsMonitorEnable");
@@ -1493,17 +1469,17 @@ VOID    wall_load_global_config()
     if( !NT_SUCCESS( status ))
     {
         KdPrint(("query value key(DnsMonitorEnable) failed!\n"));
-        gbEnableDnsMonitor = FALSE;
+        gb_enable_dns_monitor = FALSE;
     }
     else
     {
         pKeyValuePartialInfor = (PKEY_VALUE_PARTIAL_INFORMATION)RetInfor;
         ASSERT( pKeyValuePartialInfor->Type == REG_DWORD );
         if( *(UINT32 *)pKeyValuePartialInfor->Data == 0 )
-            gbEnableDnsMonitor = FALSE;
+            gb_enable_dns_monitor = FALSE;
         else
-            gbEnableDnsMonitor = TRUE;
-        KdPrint(("global_config:gbEnableDnsMonitor = %x\n",gbEnableDnsMonitor ));
+            gb_enable_dns_monitor = TRUE;
+        KdPrint(("global_config:gb_enable_dns_monitor = %x\n",gb_enable_dns_monitor ));
     }
 
     RtlInitUnicodeString( &uniValueName,L"MonitorEnable");
@@ -1516,17 +1492,17 @@ VOID    wall_load_global_config()
     if( !NT_SUCCESS( status ))
     {
         KdPrint(("query value key(MonitorEnable) failed!\n"));
-        gbEnableMonitor = FALSE;
+        gb_enable_monitor = FALSE;
     }
     else
     {
         pKeyValuePartialInfor = (PKEY_VALUE_PARTIAL_INFORMATION)RetInfor;
         ASSERT( pKeyValuePartialInfor->Type == REG_DWORD );
         if( *(UINT32 *)pKeyValuePartialInfor->Data == 0 )
-            gbEnableMonitor = FALSE;
+            gb_enable_monitor = FALSE;
         else
-            gbEnableMonitor = TRUE;
-        KdPrint(("global_config:gbEnableMonitor = %x\n",gbEnableMonitor ));
+            gb_enable_monitor = TRUE;
+        KdPrint(("global_config:gb_enable_monitor = %x\n",gb_enable_monitor ));
     }
 
     RtlInitUnicodeString( &uniValueName,L"ProcessLogFile");
@@ -1539,7 +1515,7 @@ VOID    wall_load_global_config()
     if( !NT_SUCCESS( status ))
     {
         KdPrint(("query value key(ProcessLogFile) failed!\n"));
-        gbEnableIpMonitor = FALSE;
+        gb_enable_ip_monitor = FALSE;
     }
     else
     {
@@ -1549,14 +1525,14 @@ VOID    wall_load_global_config()
         {
             //缓冲区长度检查
             KdPrint(("log file path is too long!\n"));
-            wcscpy_s( gProcessLogFilePath,MAX_PATH_LEN,L"c:\\wall_processlog.db");
+            wcscpy_s( g_process_log_file_path,MAX_PATH_LEN,L"c:\\wall_processlog.db");
         }
         else
         {
-            RtlCopyMemory( gProcessLogFilePath,pKeyValuePartialInfor->Data,pKeyValuePartialInfor->DataLength);
+            RtlCopyMemory( g_process_log_file_path,pKeyValuePartialInfor->Data,pKeyValuePartialInfor->DataLength);
 
         }
-        KdPrint(("global_config:gProcessLogFilePath = %ws\n",gProcessLogFilePath ));
+        KdPrint(("global_config:g_process_log_file_path = %ws\n",g_process_log_file_path ));
     }
 
     ZwClose( hGlobalRulesKey );
@@ -1644,16 +1620,16 @@ NTSTATUS    wall_load_process_config()
     if( !NT_SUCCESS( status ))
     {
         KdPrint(("query value key(other_access) failed!\n"));
-        gbProcessConfig_other_allow = TRUE;
+        gb_process_config_other_allow = TRUE;
     }
     else
     {
         pKeyValuePartialInfor = (PKEY_VALUE_PARTIAL_INFORMATION)RetInfor;
         ASSERT( pKeyValuePartialInfor->Type == REG_DWORD );
         if( *(UINT32 *)pKeyValuePartialInfor->Data == 1 )
-            gbProcessConfig_other_allow = TRUE;
+            gb_process_config_other_allow = TRUE;
         else
-            gbProcessConfig_other_allow = FALSE;
+            gb_process_config_other_allow = FALSE;
     }
 
 
@@ -1734,7 +1710,7 @@ NTSTATUS    wall_load_process_config()
     ZwClose( hProcessRulesKey );
     ZwClose( hCactiKey );
 
-    gbEnableProcessMonitor = TRUE;
+    gb_enable_process_monitor = TRUE;
 
     return STATUS_SUCCESS;
 
@@ -1819,17 +1795,17 @@ wall_load_ip_config()
     if( !NT_SUCCESS( status ))
     {
         KdPrint(("query value key(other_access) failed!\n"));
-        gbIpConfig_other_allow = TRUE;
+        gb_ip_config_other_allow = TRUE;
     }
     else
     {
         pKeyValuePartialInfor = (PKEY_VALUE_PARTIAL_INFORMATION)RetInfor;
         ASSERT( pKeyValuePartialInfor->Type == REG_DWORD );
         if( *(UINT32 *)pKeyValuePartialInfor->Data == 0 )
-            gbIpConfig_other_allow = FALSE;
+            gb_ip_config_other_allow = FALSE;
         else
-            gbIpConfig_other_allow = TRUE;
-        KdPrint(("ip_config:other_access = %x\n",gbIpConfig_other_allow ));
+            gb_ip_config_other_allow = TRUE;
+        KdPrint(("ip_config:other_access = %x\n",gb_ip_config_other_allow ));
     }
 
 
@@ -2117,7 +2093,7 @@ wall_load_ip_config()
     ZwClose( hIpRulesKey );
     ZwClose( hCactiKey );
 
-    gbEnableIpMonitor = TRUE;
+    gb_enable_ip_monitor = TRUE;
 
     return STATUS_SUCCESS;
 }
@@ -2195,17 +2171,17 @@ NTSTATUS wall_load_dns_config()
     if( !NT_SUCCESS( status ))
     {
         KdPrint(("query value key(other_access) failed!\n"));
-        gbDnsConfig_other_allow = TRUE;
+        gb_dns_config_other_allow = TRUE;
     }
     else
     {
         pKeyValuePartialInfor = (PKEY_VALUE_PARTIAL_INFORMATION)RetInfor;
         ASSERT( pKeyValuePartialInfor->Type == REG_DWORD );
         if( *(UINT32 *)pKeyValuePartialInfor->Data == 0 )
-            gbDnsConfig_other_allow = FALSE;
+            gb_dns_config_other_allow = FALSE;
         else
-            gbDnsConfig_other_allow = TRUE;
-        KdPrint(("dns_config:other_access = %x\n",gbDnsConfig_other_allow ));
+            gb_dns_config_other_allow = TRUE;
+        KdPrint(("dns_config:other_access = %x\n",gb_dns_config_other_allow ));
     }
 
 
@@ -2311,7 +2287,7 @@ NTSTATUS wall_load_dns_config()
 
     }//end for
 
-    gbEnableDnsMonitor = TRUE;
+    gb_enable_dns_monitor = TRUE;
 
     return STATUS_SUCCESS;
 }
@@ -2322,7 +2298,7 @@ VOID    wall_unload_process_config()
 {
     LOG("into\n");
 
-    gbEnableProcessMonitor = FALSE;
+    gb_enable_process_monitor = FALSE;
 
     return;
 }
@@ -2333,7 +2309,7 @@ VOID    wall_unload_ip_config()
 {
     LOG("into\n");
 
-    gbEnableIpMonitor = FALSE;
+    gb_enable_ip_monitor = FALSE;
 
     clear_ip_rules_list();
 
@@ -2346,7 +2322,7 @@ VOID    wall_unload_dns_config()
 {
     LOG("into\n");
 
-    gbEnableDnsMonitor = FALSE;
+    gb_enable_dns_monitor = FALSE;
 
     ClearDnsRulesList();
 
@@ -2368,13 +2344,13 @@ VOID    wall_load_config()
 
     wall_load_global_config();
 
-    if( gbEnableProcessMonitor )
+    if( gb_enable_process_monitor )
         wall_load_process_config();
 
-    if( gbEnableIpMonitor )
+    if( gb_enable_ip_monitor )
         wall_load_ip_config();
 
-    if( gbEnableDnsMonitor )
+    if( gb_enable_dns_monitor )
         wall_load_dns_config();
     
 }
@@ -2393,13 +2369,13 @@ VOID    wall_unload_config()
     LOG("into\n");
 
 
-    if( gbEnableProcessMonitor )
+    if( gb_enable_process_monitor )
         wall_unload_process_config();
 
-    if( gbEnableIpMonitor )
+    if( gb_enable_ip_monitor )
         wall_unload_ip_config();
 
-    if( gbEnableDnsMonitor)
+    if( gb_enable_dns_monitor)
         wall_unload_dns_config();
     
 }
@@ -2438,8 +2414,8 @@ wall_is_process_traffic_permit( IN pwall_pended_packet packet )
         }
     }
 
-    KdPrint(("return %x\n",gbProcessConfig_other_allow ));
-    return gbProcessConfig_other_allow;
+    KdPrint(("return %x\n",gb_process_config_other_allow ));
+    return gb_process_config_other_allow;
 }
 
 BOOLEAN
@@ -2556,8 +2532,8 @@ wall_is_ip_traffic_permit( IN pwall_pended_packet packet )
     }
     else
     {
-        KdPrint(("return %x\n",gbIpConfig_other_allow));
-        return gbIpConfig_other_allow;
+        KdPrint(("return %x\n",gb_ip_config_other_allow));
+        return gb_ip_config_other_allow;
     }
 
 }
@@ -2608,7 +2584,7 @@ wall_is_dns_traffic_permit( IN pwall_pended_packet packet )
     if( udpDataBuffer == NULL)
     {
         KdPrint(("memory allocated failed! return true!\n"));
-        return gbDnsConfig_other_allow;
+        return gb_dns_config_other_allow;
     }
 
     for(bytesCopied = 0;
@@ -2662,7 +2638,7 @@ wall_is_dns_traffic_permit( IN pwall_pended_packet packet )
     if( uniDnsName.Buffer == NULL )
     {
         KdPrint(("Memory allocated failed!(unicode buffer)\n"));
-        return gbDnsConfig_other_allow;
+        return gb_dns_config_other_allow;
     }
     RtlZeroMemory( uniDnsName.Buffer,uniDnsName.MaximumLength );
     KdPrint(("ansi_string = %s\n",ansiDnsName.Buffer ));
@@ -2712,8 +2688,8 @@ wall_is_dns_traffic_permit( IN pwall_pended_packet packet )
     }
     else
     {
-        KdPrint(("return other_allow:%x\n",gbDnsConfig_other_allow));
-        return gbDnsConfig_other_allow;
+        KdPrint(("return other_allow:%x\n",gb_dns_config_other_allow));
+        return gb_dns_config_other_allow;
     }
 
 }

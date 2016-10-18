@@ -2,7 +2,7 @@
 #include"crc32.h"
 #include "memtrace.h"
 
-UINT32   HashUnicodeString( IN PUNICODE_STRING s )
+UINT32   hash_unicode_string( IN PUNICODE_STRING s )
 /*++
 --*/
 {
@@ -33,7 +33,7 @@ CreateVolumeLinkTable()
 --*/
 {
     NTSTATUS    status = STATUS_SUCCESS;
-    OBJECT_ATTRIBUTES   objAttr;
+    OBJECT_ATTRIBUTES   object_attr;
     UNICODE_STRING      uniStrLinkName;
     UNICODE_STRING      uniStrTarName;
     HANDLE              linkHandle = NULL;
@@ -53,8 +53,8 @@ CreateVolumeLinkTable()
         gVolumeLinkTable[ ch - L'a' ].VolumeLetter = ch;
         gVolumeLinkTable[ ch - L'a' ].crcMappedDevName = 0;
 
-        InitializeObjectAttributes ( &objAttr,&uniStrLinkName,OBJ_KERNEL_HANDLE,NULL,NULL );
-        status = ZwOpenSymbolicLinkObject(&linkHandle,GENERIC_READ,&objAttr );
+        InitializeObjectAttributes ( &object_attr,&uniStrLinkName,OBJ_KERNEL_HANDLE,NULL,NULL );
+        status = ZwOpenSymbolicLinkObject(&linkHandle,GENERIC_READ,&object_attr );
         if( !NT_SUCCESS(status ))
         {
             //KdPrint(("open symbolic link(%wZ) object failed!\n",&uniStrLinkName));
@@ -72,7 +72,7 @@ CreateVolumeLinkTable()
             {
                 uniStrTarName.Buffer[i] = uniStrTarName.Buffer[i] - L'A' + L'a';
             }
-        gVolumeLinkTable[ ch - L'a' ].crcMappedDevName = HashUnicodeString( &uniStrTarName );
+        gVolumeLinkTable[ ch - L'a' ].crcMappedDevName = hash_unicode_string( &uniStrTarName );
 next:
         ZwClose( linkHandle );
         linkHandle = NULL;
@@ -128,7 +128,7 @@ DevicePathToDosPath(
         goto exit;
     }
 
-    crcDevName = HashUnicodeString( devicePath );
+    crcDevName = hash_unicode_string( devicePath );
     for( j = 0;j < 26;j++)
     {
         if( crcDevName == gVolumeLinkTable[j].crcMappedDevName )
@@ -165,7 +165,7 @@ BOOLEAN                 bUnloading = FALSE;
 KSTART_ROUTINE WorkerThreadProc;
 VOID 
 WorkerThreadProc(
-    IN PVOID    Context
+    IN PVOID    context
     )
 /*++
 --*/
@@ -185,7 +185,7 @@ WorkerThreadProc(
                                                                     &gWorkerThread->list,
                                                                     &gWorkerThread->spinLock))
         {
-            node->routineAddress( node->Context );
+            node->routineAddress( node->context );
             my_ex_free_pool( node );
         }
         if( bUnloading )
@@ -264,7 +264,7 @@ DestroyWorkerThread()
 NTSTATUS
 run_my_process(
      my_process    MyProcess,
-     PVOID    Context
+     PVOID    context
     )
 /*++
 --*/
@@ -281,7 +281,7 @@ run_my_process(
         return STATUS_UNSUCCESSFUL;
     }
 
-    node->Context = Context;
+    node->context = context;
     node->routineAddress = MyProcess;
     ExInterlockedInsertTailList(
                             &gWorkerThread->list,

@@ -68,7 +68,7 @@ typedef struct _wall_connect_list
     KSPIN_LOCK		lock;
 }wall_connect_list, wall_packet_list, *pwall_connect_list, *pwall_packet_list;
 
-NTSTATUS RegisterCalloutForLayer ( IN const GUID* layer_key,
+NTSTATUS register_callout_for_layer ( IN const GUID* layer_key,
    IN const GUID* callout_key,
    IN FWPS_CALLOUT_CLASSIFY_FN classify_fn,
    IN FWPS_CALLOUT_NOTIFY_FN notify_fn,
@@ -105,7 +105,7 @@ wall_pended_packet* wall_allocate_and_init_pended_packet ( IN const FWPS_INCOMIN
 
 VOID wall_free_pended_packet( IN pwall_pended_packet packet );
 
-VOID wall_inspect_wall_packets ( IN PVOID Context );
+VOID wall_inspect_wall_packets ( IN PVOID context );
 
 BOOLEAN is_matching_connect_packet( IN const FWPS_INCOMING_VALUES0* in_fixed_values,
    IN ADDRESS_FAMILY address_family,

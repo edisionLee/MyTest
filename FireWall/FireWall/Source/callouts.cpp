@@ -8,9 +8,9 @@ extern HANDLE					g_inject_handle;
 extern pwall_connect_list		g_connect_list;
 extern pwall_packet_list		g_packet_list;
 
-extern VOID wall_inspect_wall_packets ( PVOID Context );
+extern VOID wall_inspect_wall_packets ( PVOID context );
 
-extern NTSTATUS wall_run_my_process ( my_process ToyMyProcess, PVOID Context );
+extern NTSTATUS wall_run_my_process ( my_process ToyMyProcess, PVOID context );
 
 void NTAPI wall_ale_connect_classify ( IN const FWPS_INCOMING_VALUES* in_fixed_values,
    IN const FWPS_INCOMING_METADATA_VALUES* in_meta_values,

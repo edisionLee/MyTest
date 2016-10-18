@@ -10,13 +10,13 @@ extern pwall_packet_list    g_packet_list;
 
 extern
 VOID
-wall_inspect_wall_packets( PVOID Context );
+wall_inspect_wall_packets( PVOID context );
 
 extern
 NTSTATUS
 wall_run_my_process(
     my_process      ToyMyProcess,
-    PVOID           Context
+    PVOID           context
     );
 
 void 
@@ -239,7 +239,7 @@ exit:
 
 NTSTATUS 
 NTAPI
-WallALEConnectNotify(
+wall_ale_connect_notify(
     IN FWPS_CALLOUT_NOTIFY_TYPE  notify_type,
     IN const GUID  *filter_key,
     IN const FWPS_FILTER  *filter
